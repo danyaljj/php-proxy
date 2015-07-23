@@ -17,9 +17,9 @@ session_start();
 ob_start();
 
 /* config settings */
-$base = "http://www.bbc.co.uk";  //set this to the url you want to scrape
+$base = "austen.cs.illinois.edu:8095";  //set this to the url you want to scrape
+$rootPath = '~khashab2/files/profiler/profilerVisualizer/';
 $ckfile = '/tmp/simpleproxy-cookie-'.session_id();  //this can be set to anywhere you fancy!  just make sure it is secure.
-
 
 
 /* all system code happens below - you should not need to edit it! */
@@ -29,12 +29,12 @@ $cookiedomain = str_replace("http://www.","",$base);
 $cookiedomain = str_replace("https://www.","",$cookiedomain);
 $cookiedomain = str_replace("www.","",$cookiedomain);
 
-$url = $base . $_SERVER['REQUEST_URI'];
+$url = $base . str_replace($rootPath, '', $_SERVER['REQUEST_URI']);
 
 if($_SERVER['HTTPS'] == 'on'){
-	$mydomain = 'https://'.$_SERVER['HTTP_HOST'];
+        $mydomain = 'https://'.$_SERVER['HTTP_HOST'];
 } else {
-	$mydomain = 'http://'.$_SERVER['HTTP_HOST'];
+        $mydomain = 'http://'.$_SERVER['HTTP_HOST'];
 }
 
 // Open the cURL session
@@ -45,29 +45,22 @@ curl_setopt ($curlSession, CURLOPT_HEADER, 1);
 
 
 if($_SERVER['REQUEST_METHOD'] == 'POST'){
-        $postinfo = '';
-        foreach($_POST as $key=>$value) {
-                $postinfo .= $key.'='.urlencode($value).'&';
-        }
-        rtrim($postinfo,'&');
-
-
         curl_setopt ($curlSession, CURLOPT_POST, 1);
-        curl_setopt ($curlSession, CURLOPT_POSTFIELDS, $postinfo);
+        curl_setopt ($curlSession, CURLOPT_POSTFIELDS, $_POST);
 }
 
 curl_setopt($curlSession, CURLOPT_RETURNTRANSFER,1);
 curl_setopt($curlSession, CURLOPT_TIMEOUT,30);
 curl_setopt($curlSession, CURLOPT_SSL_VERIFYHOST, 1);
-curl_setopt ($curlSession, CURLOPT_COOKIEJAR, $ckfile); 
+curl_setopt ($curlSession, CURLOPT_COOKIEJAR, $ckfile);
 curl_setopt ($curlSession, CURLOPT_COOKIEFILE, $ckfile);
 
 //handle other cookies cookies
 foreach($_COOKIE as $k=>$v){
-	if(is_array($v)){
-		$v = serialize($v);
-	}
-	curl_setopt($curlSession,CURLOPT_COOKIE,"$k=$v; domain=.$cookiedomain ; path=/");
+        if(is_array($v)){
+                $v = serialize($v);
+        }
+        curl_setopt($curlSession,CURLOPT_COOKIE,"$k=$v; domain=.$cookiedomain ; path=/");
 }
 
 //Send the request and store the result in an array
@@ -79,28 +72,29 @@ if (curl_error($curlSession)){
         print curl_error($curlSession);
 } else {
 
-	//clean duplicate header that seems to appear on fastcgi with output buffer on some servers!!
-	$response = str_replace("HTTP/1.1 100 Continue\r\n\r\n","",$response);
+        //clean duplicate header that seems to appear on fastcgi with output buffer on some servers!!
+        $response = str_replace("HTTP/1.1 100 Continue\r\n\r\n","",$response);
 
-	$ar = explode("\r\n\r\n", $response, 2); 
+        $ar = explode("\r\n\r\n", $response, 2);
 
 
-	$header = $ar[0];
-	$body = $ar[1];
+        $header = $ar[0];
+        $body = $ar[1];
 
-	//handle headers - simply re-outputing them
-	$header_ar = split(chr(10),$header); 
-	foreach($header_ar as $k=>$v){
-		if(!preg_match("/^Transfer-Encoding/",$v)){
-			$v = str_replace($base,$mydomain,$v); //header rewrite if needed
-			header(trim($v));
-		}
-	}
-
+        //handle headers - simply re-outputing them
+        $header_ar = split(chr(10),$header);
+        foreach($header_ar as $k=>$v){
+                if(!preg_match("/^Transfer-Encoding/",$v)){
+                        $v = str_replace($base,$mydomain,$v); //header rewrite if needed
+                        header(trim($v));
+                }
+        }
+        
   //rewrite all hard coded urls to ensure the links still work!
-	$body = str_replace($base,$mydomain,$body);
-
-	print $body;
+        $body = str_replace($base,$mydomain,$body);
+        $body = str_replace('/main.css', '/~khashab2/files/profiler/profilerVisualizer/main.css', $body);
+        $body = str_replace('/main.js', '/~khashab2/files/profiler/profilerVisualizer/main.js', $body);
+        print $body;
 
 }
 
@@ -108,3 +102,4 @@ curl_close ($curlSession);
 
 
 ?>
+            
